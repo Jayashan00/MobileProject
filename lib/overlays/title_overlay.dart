@@ -16,15 +16,11 @@ class _TitleOverlayState extends State<TitleOverlay> {
   @override
   void initState() {
     super.initState();
-
-    Future.delayed(
-      const Duration(milliseconds: 0),
-      () {
-        setState(() {
-          _opacity = 1.0;
-        });
-      },
-    );
+    Future.delayed(Duration.zero, () {
+      setState(() {
+        _opacity = 1.0;
+      });
+    });
   }
 
   @override
@@ -49,7 +45,23 @@ class _TitleOverlayState extends State<TitleOverlay> {
               width: 270,
               child: Image.asset('assets/images/title.png'),
             ),
+
+            // NEW: Display High Score on Title Screen
             const SizedBox(height: 20),
+            Text(
+              'HIGH SCORE: ${widget.game.highScore}',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                shadows: [
+                  Shadow(blurRadius: 4, color: Colors.blue, offset: Offset(0, 0))
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 20),
+            // Character Selector Row
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -73,7 +85,7 @@ class _TitleOverlayState extends State<TitleOverlay> {
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.only(left: 30, right: 30, top: 30),
+                  padding: const EdgeInsets.symmetric(horizontal: 30),
                   child: SizedBox(
                     width: 100,
                     child: Image.asset(
@@ -100,7 +112,7 @@ class _TitleOverlayState extends State<TitleOverlay> {
                 ),
               ],
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 20),
             GestureDetector(
               onTap: () {
                 widget.game.audioManager.playSound('start');
@@ -114,6 +126,8 @@ class _TitleOverlayState extends State<TitleOverlay> {
                 child: Image.asset('assets/images/start_button.png'),
               ),
             ),
+
+            // Audio Controls (Bottom Right)
             Expanded(
               child: Align(
                 alignment: Alignment.bottomRight,

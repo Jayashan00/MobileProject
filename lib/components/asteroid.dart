@@ -18,8 +18,14 @@ class Asteroid extends SpriteComponent with HasGameReference<MyGame> {
   late double _health;
   bool _isKnockedback = false;
 
-  Asteroid({required super.position, double size = _maxSize})
-      : super(
+  // NEW: Store the speed multiplier
+  final double speedMultiplier;
+
+  Asteroid({
+    required super.position,
+    double size = _maxSize,
+    this.speedMultiplier = 1.0, // Default to 1.0 (normal speed)
+  }) : super(
           size: Vector2.all(size),
           anchor: Anchor.center,
           priority: -1,
@@ -54,20 +60,20 @@ class Asteroid extends SpriteComponent with HasGameReference<MyGame> {
   Vector2 _generateVelocity() {
     final double forceFactor = _maxSize / size.x;
 
-    return Vector2(
-          _random.nextDouble() * 120 - 60,
-          100 + _random.nextDouble() * 50,
-        ) *
-        forceFactor;
+    Vector2 baseVelocity = Vector2(
+      _random.nextDouble() * 120 - 60,
+      100 + _random.nextDouble() * 50,
+    ) * forceFactor;
+
+    // UPDATED: Multiply the base velocity by the difficulty multiplier
+    return baseVelocity * speedMultiplier;
   }
 
   void _handleScreenBounds() {
-    // remove the asteroid from the game if it goes below the bottom
     if (position.y > game.size.y + size.y / 2) {
       removeFromParent();
     }
 
-    // perform wraparound if the asteroid goes over the left or right edge
     final double screenWidth = game.size.x;
     if (position.x < -size.x / 2) {
       position.x = screenWidth + size.x / 2;
@@ -144,6 +150,7 @@ class Asteroid extends SpriteComponent with HasGameReference<MyGame> {
       final Asteroid fragment = Asteroid(
         position: position.clone(),
         size: size.x - _maxSize / 3,
+        speedMultiplier: speedMultiplier, // Pass multiplier to children
       );
       game.add(fragment);
     }

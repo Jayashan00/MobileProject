@@ -16,15 +16,11 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
   @override
   void initState() {
     super.initState();
-
-    Future.delayed(
-      const Duration(milliseconds: 0),
-      () {
-        setState(() {
-          _opacity = 1.0;
-        });
-      },
-    );
+    Future.delayed(Duration.zero, () {
+      setState(() {
+        _opacity = 1.0;
+      });
+    });
   }
 
   @override
@@ -38,7 +34,7 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
       opacity: _opacity,
       duration: const Duration(milliseconds: 500),
       child: Container(
-        color: Colors.black.withAlpha(150),
+        color: Colors.black.withAlpha(200),
         alignment: Alignment.center,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -51,6 +47,25 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
                 fontWeight: FontWeight.bold,
               ),
             ),
+            const SizedBox(height: 20),
+
+            // NEW: Display Score and High Score
+            Text(
+              'Score: ${widget.game.currentScore}',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 32,
+              ),
+            ),
+            Text(
+              'High Score: ${widget.game.highScore}',
+              style: const TextStyle(
+                color: Colors.yellow, // Highlight High Score in yellow
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+
             const SizedBox(height: 30),
             TextButton(
               onPressed: () {
@@ -68,7 +83,7 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
                   borderRadius: BorderRadius.circular(50),
                 ),
               ),
-              child: Text(
+              child: const Text(
                 'PLAY AGAIN',
                 style: TextStyle(
                   color: Colors.white,
@@ -93,7 +108,7 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
                   borderRadius: BorderRadius.circular(50),
                 ),
               ),
-              child: Text(
+              child: const Text(
                 'QUIT GAME',
                 style: TextStyle(
                   color: Colors.white,

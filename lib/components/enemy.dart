@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:math';
-import 'dart:ui'; // Required for Color
+import 'dart:ui';
 
 import 'package:cosmic_havoc/components/enemy_laser.dart';
 import 'package:cosmic_havoc/components/explosion.dart';
@@ -14,7 +14,7 @@ class Enemy extends SpriteComponent
     with HasGameReference<MyGame>, CollisionCallbacks {
 
   // Movement variables
-  final double _speed = 150;
+  late double _speed; // Changed to late so we can set it in constructor
   double _time = 0;
   final double _initialX;
 
@@ -25,22 +25,22 @@ class Enemy extends SpriteComponent
   // Health
   int _hp = 2;
 
-  Enemy({required Vector2 position})
+  // NEW: Accept speedMultiplier
+  Enemy({required Vector2 position, double speedMultiplier = 1.0})
       : _initialX = position.x,
-        // UPDATED: Changed size from 60 to 180 (3x bigger)
-        super(position: position, size: Vector2.all(180), anchor: Anchor.center);
+        super(position: position, size: Vector2.all(180), anchor: Anchor.center) {
+    // Base speed is 150, multiplied by difficulty
+    _speed = 150 * speedMultiplier;
+  }
 
   @override
   FutureOr<void> onLoad() async {
     sprite = await game.loadSprite('enemy.png');
 
-    // Rotate 180 degrees so it faces down
     angle = pi;
 
-    // Hitbox will automatically match the new size (180x180)
     add(RectangleHitbox());
 
-    // Set up shooting timer
     _shootTimer = Timer(
       1.5 + _random.nextDouble() * 1.5,
       onTick: _shoot,
@@ -75,8 +75,6 @@ class Enemy extends SpriteComponent
 
     game.audioManager.playSound('laser');
 
-    // UPDATED: Calculate spawn position dynamically based on size
-    // size.y / 2 ensures the laser spawns at the nose of the ship
     game.add(EnemyLaser(position: position + Vector2(0, size.y / 2)));
   }
 
@@ -100,7 +98,7 @@ class Enemy extends SpriteComponent
 
     game.add(Explosion(
       position: position,
-      explosionSize: size.x, // Explosion size scales automatically too
+      explosionSize: size.x,
       explosionType: ExplosionType.fire,
     ));
   }
