@@ -3,10 +3,11 @@ import 'dart:math';
 
 import 'package:cosmic_havoc/components/asteroid.dart';
 import 'package:cosmic_havoc/components/audio_manager.dart';
+import 'package:cosmic_havoc/components/boss.dart'; // NEW IMPORT
 import 'package:cosmic_havoc/components/enemy.dart';
 import 'package:cosmic_havoc/components/enemy_laser.dart';
 import 'package:cosmic_havoc/components/health_bar.dart';
-import 'package:cosmic_havoc/components/pause_button.dart'; // NEW IMPORT
+import 'package:cosmic_havoc/components/pause_button.dart';
 import 'package:cosmic_havoc/components/pickup.dart';
 import 'package:cosmic_havoc/components/player.dart';
 import 'package:cosmic_havoc/components/shoot_button.dart';
@@ -31,6 +32,9 @@ class MyGame extends FlameGame
 
   int _score = 0;
   int highScore = 0;
+
+  // NEW: Track if the boss has been spawned
+  bool _bossSpawned = false;
 
   double get difficultyMultiplier => 1.0 + (_score / 500);
 
@@ -69,6 +73,7 @@ class MyGame extends FlameGame
 
   void startGame() async {
     audioManager.playMusic();
+    _bossSpawned = false; // Reset boss state
 
     await _createJoystick();
     await _createPlayer();
@@ -79,8 +84,6 @@ class MyGame extends FlameGame
     _createScoreDisplay();
 
     add(HealthBar());
-
-    // NEW: Add the Pause Button
     add(PauseButton());
   }
 
@@ -206,6 +209,28 @@ class MyGame extends FlameGame
     );
 
     _scoreDisplay.add(popEffect);
+
+    // NEW: Check if we should spawn the boss (Score >= 100)
+    if (_score >= 200 && !_bossSpawned) {
+      _spawnBoss();
+    }
+  }
+
+  // NEW: Logic to spawn the Boss
+  void _spawnBoss() {
+    _bossSpawned = true;
+
+    // Stop spawning regular enemies so the player can focus on the Boss
+    _enemySpawner.timer.stop();
+
+    // Add the Boss component
+    add(Boss());
+  }
+
+  // NEW: Logic called when Boss is destroyed
+  void bossDefeated() {
+    // Resume spawning regular enemies
+    _enemySpawner.timer.start();
   }
 
   void _createStars() {
@@ -221,18 +246,23 @@ class MyGame extends FlameGame
   }
 
   void restartGame() {
-    // NEW: Also remove PauseButton so we don't duplicate it
+    // Remove all game entities
     children.whereType<PositionComponent>().forEach((component) {
       if (component is Asteroid ||
           component is Pickup ||
           component is HealthBar ||
           component is Enemy ||
           component is EnemyLaser ||
-          component is PauseButton) {  // Remove old pause button
+          component is PauseButton ||
+          component is Boss) { // NEW: Ensure Boss is removed on restart
         remove(component);
       }
     });
 
+    // Reset Boss State
+    _bossSpawned = false;
+
+    // Restart Spawners
     _asteroidSpawner.timer.start();
     _pickupSpawner.timer.start();
     _enemySpawner.timer.start();
@@ -243,7 +273,7 @@ class MyGame extends FlameGame
     _createPlayer();
 
     add(HealthBar());
-    add(PauseButton()); // Add fresh pause button
+    add(PauseButton());
 
     resumeEngine();
   }
