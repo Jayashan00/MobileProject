@@ -6,6 +6,7 @@ import 'package:cosmic_havoc/components/audio_manager.dart';
 import 'package:cosmic_havoc/components/enemy.dart';
 import 'package:cosmic_havoc/components/enemy_laser.dart';
 import 'package:cosmic_havoc/components/health_bar.dart';
+import 'package:cosmic_havoc/components/pause_button.dart'; // NEW IMPORT
 import 'package:cosmic_havoc/components/pickup.dart';
 import 'package:cosmic_havoc/components/player.dart';
 import 'package:cosmic_havoc/components/shoot_button.dart';
@@ -16,7 +17,7 @@ import 'package:flame/events.dart';
 import 'package:flame/flame.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart'; // NEW IMPORT
+import 'package:shared_preferences/shared_preferences.dart';
 
 class MyGame extends FlameGame
     with HasKeyboardHandlerComponents, HasCollisionDetection {
@@ -28,9 +29,8 @@ class MyGame extends FlameGame
   final Random _random = Random();
   late ShootButton _shootButton;
 
-  // Score variables
   int _score = 0;
-  int highScore = 0; // NEW: High Score variable
+  int highScore = 0;
 
   double get difficultyMultiplier => 1.0 + (_score / 500);
 
@@ -47,7 +47,6 @@ class MyGame extends FlameGame
     audioManager = AudioManager();
     await add(audioManager);
 
-    // NEW: Load the high score from storage
     await loadHighScore();
 
     _createStars();
@@ -55,13 +54,11 @@ class MyGame extends FlameGame
     return super.onLoad();
   }
 
-  // NEW: Helper method to load score
   Future<void> loadHighScore() async {
     final prefs = await SharedPreferences.getInstance();
     highScore = prefs.getInt('highScore') ?? 0;
   }
 
-  // NEW: Helper method to save score if it's a new record
   Future<void> checkNewHighScore() async {
     if (_score > highScore) {
       highScore = _score;
@@ -82,6 +79,9 @@ class MyGame extends FlameGame
     _createScoreDisplay();
 
     add(HealthBar());
+
+    // NEW: Add the Pause Button
+    add(PauseButton());
   }
 
   Future<void> _createPlayer() async {
@@ -190,7 +190,6 @@ class MyGame extends FlameGame
     add(_scoreDisplay);
   }
 
-  // Getter so Overlay can read score
   int get currentScore => _score;
 
   void incrementScore(int amount) {
@@ -216,20 +215,20 @@ class MyGame extends FlameGame
   }
 
   void playerDied() async {
-    // NEW: Check and save high score when player dies
     await checkNewHighScore();
-
     overlays.add('GameOver');
     pauseEngine();
   }
 
   void restartGame() {
+    // NEW: Also remove PauseButton so we don't duplicate it
     children.whereType<PositionComponent>().forEach((component) {
       if (component is Asteroid ||
           component is Pickup ||
           component is HealthBar ||
           component is Enemy ||
-          component is EnemyLaser) {
+          component is EnemyLaser ||
+          component is PauseButton) {  // Remove old pause button
         remove(component);
       }
     });
@@ -244,6 +243,7 @@ class MyGame extends FlameGame
     _createPlayer();
 
     add(HealthBar());
+    add(PauseButton()); // Add fresh pause button
 
     resumeEngine();
   }
