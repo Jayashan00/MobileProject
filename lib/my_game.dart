@@ -12,14 +12,24 @@ import 'package:cosmic_havoc/components/pickup.dart';
 import 'package:cosmic_havoc/components/player.dart';
 import 'package:cosmic_havoc/components/shoot_button.dart';
 import 'package:cosmic_havoc/components/star.dart';
-import 'package:cosmic_havoc/components/driver_hud.dart'; // NEW
+import 'package:cosmic_havoc/components/driver_hud.dart';
 import 'package:flame/components.dart';
 import 'package:flame/effects.dart';
 import 'package:flame/events.dart';
 import 'package:flame/flame.dart';
 import 'package:flame/game.dart';
+import 'package:flame/parallax.dart'; // Import Parallax
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+// 1. Class to hold Map Information
+class MapData {
+  final String name;
+  final String asset;
+  final int cost;
+
+  MapData({required this.name, required this.asset, required this.cost});
+}
 
 class MyGame extends FlameGame
     with HasKeyboardHandlerComponents, HasCollisionDetection {
@@ -35,16 +45,27 @@ class MyGame extends FlameGame
   int highScore = 0;
   bool _bossSpawned = false;
 
-  // --- NEW: Upgrade Variables ---
+  // Upgrade Variables
   int wallet = 0;
   int healthLevel = 0;
   int speedLevel = 0;
   int fireRateLevel = 0;
-  // ------------------------------
 
-  // NEW: Selected driver index (0,1,2...)
+  // Driver Selection
   int selectedDriver = 0;
-  late DriverHud driverHud; // NEW
+  late DriverHud driverHud;
+
+  // --- NEW: Map System Variables ---
+  final List<MapData> maps = [
+    MapData(name: 'Deep Space', asset: 'default', cost: 0), // Index 0: Default
+    MapData(name: 'Nebula', asset: 'map_1.png', cost: 500),
+    MapData(name: 'Red Galaxy', asset: 'map_2.png', cost: 1000),
+    MapData(name: 'Void Base', asset: 'map_3.png', cost: 2000),
+  ];
+  List<int> unlockedMapIndices = [0]; // Default map is always unlocked
+  int currentMapIndex = 0;
+  ParallaxComponent? _currentBackground;
+  // -------------------------------
 
   double get difficultyMultiplier => 1.0 + (_score / 500);
 
@@ -63,12 +84,14 @@ class MyGame extends FlameGame
 
     await loadData();
 
-    _createStars();
+    // Initialize Background based on loaded data
+    _updateBackground();
+    _createStars(); // Stars are drawn on top of the background
 
     return super.onLoad();
   }
 
-  // --- NEW: Load all data including upgrades ---
+  // Load all data including upgrades and maps
   Future<void> loadData() async {
     final prefs = await SharedPreferences.getInstance();
     highScore = prefs.getInt('highScore') ?? 0;
@@ -76,10 +99,18 @@ class MyGame extends FlameGame
     healthLevel = prefs.getInt('healthLevel') ?? 0;
     speedLevel = prefs.getInt('speedLevel') ?? 0;
     fireRateLevel = prefs.getInt('fireRateLevel') ?? 0;
-    selectedDriver = prefs.getInt('selectedDriver') ?? 0; // NEW
+    selectedDriver = prefs.getInt('selectedDriver') ?? 0;
+
+    // LOAD MAPS
+    currentMapIndex = prefs.getInt('currentMapIndex') ?? 0;
+    String? unlockedString = prefs.getString('unlockedMaps');
+    if (unlockedString != null && unlockedString.isNotEmpty) {
+      unlockedMapIndices =
+          unlockedString.split(',').map((e) => int.parse(e)).toList();
+    }
   }
 
-  // --- NEW: Save all data ---
+  // Save all data including upgrades and maps
   Future<void> saveData() async {
     final prefs = await SharedPreferences.getInstance();
     if (_score > highScore) {
@@ -90,10 +121,66 @@ class MyGame extends FlameGame
     await prefs.setInt('healthLevel', healthLevel);
     await prefs.setInt('speedLevel', speedLevel);
     await prefs.setInt('fireRateLevel', fireRateLevel);
-    await prefs.setInt('selectedDriver', selectedDriver); // NEW
+    await prefs.setInt('selectedDriver', selectedDriver);
+
+    // SAVE MAPS
+    await prefs.setInt('currentMapIndex', currentMapIndex);
+    await prefs.setString('unlockedMaps', unlockedMapIndices.join(','));
   }
 
-  // --- NEW: Buy Logic ---
+  // --- Logic to Buy a Map ---
+  bool buyMap(int index) {
+    if (index < 0 || index >= maps.length) return false;
+    if (unlockedMapIndices.contains(index)) return true; // Already owned
+
+    int cost = maps[index].cost;
+    if (wallet >= cost) {
+      wallet -= cost;
+      unlockedMapIndices.add(index);
+      saveData();
+      audioManager.playSound('collect');
+      return true;
+    }
+    return false;
+  }
+
+  // --- Logic to Select a Map ---
+  void selectMap(int index) {
+    if (unlockedMapIndices.contains(index)) {
+      currentMapIndex = index;
+      _updateBackground(); // Change the visual immediately
+      saveData();
+      audioManager.playSound('click');
+    }
+  }
+
+  // --- Helper to update the visual background ---
+  void _updateBackground() async {
+    // 1. Remove existing background if present
+    if (_currentBackground != null) {
+      remove(_currentBackground!);
+      _currentBackground = null;
+    }
+
+    // 2. If it's the default map (index 0), we use the black background + stars only
+    if (currentMapIndex == 0) {
+      return;
+    }
+
+    // 3. Load Parallax for other maps
+    String asset = maps[currentMapIndex].asset;
+    _currentBackground = await loadParallaxComponent(
+      [ParallaxImageData(asset)],
+      baseVelocity: Vector2(0, 50), // Slowly scroll down
+      velocityMultiplierDelta: Vector2(1, 1),
+      repeat: ImageRepeat.repeat,
+    );
+
+    // Make sure it's behind everything (-100 priority)
+    _currentBackground!.priority = -100;
+    add(_currentBackground!);
+  }
+
   void buyUpgrade(String type) {
     int cost = 0;
 
@@ -134,7 +221,6 @@ class MyGame extends FlameGame
     _createPickupSpawner();
     _createScoreDisplay();
 
-    // --- NEW: Driver HUD ---
     driverHud = DriverHud();
     add(driverHud);
 
@@ -142,7 +228,6 @@ class MyGame extends FlameGame
     add(PauseButton());
   }
 
-  // --- SCREEN SHAKE (Required by Player) ---
   void shakeWorld({double intensity = 10, double duration = 0.05}) {
     if (camera.viewfinder.children.whereType<MoveEffect>().isNotEmpty) return;
 
@@ -297,6 +382,8 @@ class MyGame extends FlameGame
   }
 
   void _createStars() {
+    // Ensure stars are always behind game objects but in front of background
+    // If background is -100, stars can be -10
     for (int i = 0; i < 50; i++) {
       add(Star()..priority = -10);
     }
@@ -318,7 +405,7 @@ class MyGame extends FlameGame
           component is EnemyLaser ||
           component is PauseButton ||
           component is Boss ||
-          component is DriverHud) { // INCLUDE HUD
+          component is DriverHud) {
         remove(component);
       }
     });
@@ -337,7 +424,6 @@ class MyGame extends FlameGame
 
     _createPlayer();
 
-    // RE-ADD HUD
     driverHud = DriverHud();
     add(driverHud);
 
@@ -349,7 +435,7 @@ class MyGame extends FlameGame
 
   void quitGame() {
     children.whereType<PositionComponent>().forEach((component) {
-      if (component is! Star) {
+      if (component is! Star && component is! ParallaxComponent) {
         remove(component);
       }
     });

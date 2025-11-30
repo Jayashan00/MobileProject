@@ -47,7 +47,7 @@ class _TitleOverlayState extends State<TitleOverlay> {
             ),
             const SizedBox(height: 20),
 
-            // NEW: Show Credits on Title
+            // Show Credits on Title
             Text(
               'Credits: ${widget.game.wallet}',
               style: const TextStyle(
@@ -123,7 +123,7 @@ class _TitleOverlayState extends State<TitleOverlay> {
               ),
             ),
 
-            // NEW: HANGAR BUTTON
+            // HANGAR BUTTON
             const SizedBox(height: 15),
             ElevatedButton.icon(
               onPressed: () {
@@ -135,6 +135,23 @@ class _TitleOverlayState extends State<TitleOverlay> {
               label: const Text('SHIP HANGAR', style: TextStyle(color: Colors.white)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.blueGrey,
+                padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 10),
+              ),
+            ),
+
+            // --- NEW: MAP SELECTION BUTTON ---
+            const SizedBox(height: 10),
+            ElevatedButton.icon(
+              onPressed: () {
+                widget.game.audioManager.playSound('click');
+                widget.game.overlays.remove('Title');
+                widget.game.overlays.add('MapSelection');
+              },
+              icon: const Icon(Icons.map, color: Colors.white),
+              label: const Text('SECTOR MAPS', style: TextStyle(color: Colors.white)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.deepPurple,
+                padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 10),
               ),
             ),
 
