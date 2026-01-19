@@ -22,7 +22,7 @@ class _TitleOverlayState extends State<TitleOverlay> {
       });
     });
   }
-
+//build method
   @override
   Widget build(BuildContext context) {
     final String playerColor =
